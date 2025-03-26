@@ -64,7 +64,6 @@ async def on_reaction_add(reaction, user):
                 del ongoing_requests[reaction.message.id]
                 await reaction.message.channel.send(f"{reaction.message.mentions[0].mention} rejected your challenge!")
 
-
 @bot.hybrid_command()
 async def start(ctx):
     #starting a game with the bot
@@ -97,7 +96,7 @@ async def startGame(channel, players, botGame):
         f"Game started! {player1.mention} (Player1) vs {player2.mention} (Player2)\n"
     )
 
-    state_display = generate_game_display(game)
+    state_display = generate_game_display(game, [player1.mention, player2.mention])
     await channel.send(state_display)
 
 @bot.hybrid_command()
@@ -109,64 +108,71 @@ async def play(ctx, x: int):
 
     game = ongoing_games[user_id]
     if(game.player2_id == bot.user.id):
-        if ctx.author.id == game.player1_id:
-            if x < 0 or x > game.a:
-                await ctx.send(f"{ctx.author.mention}, invalid move! Choose between 0 and {game.a}.")
-                return
-
-            y = new_strat(game.b, game.a, game.p)
-            game.play_round(x, y)
-
-            await ctx.send(f"{ctx.author.mention} spent {x} coins.\n"
-                        f"{bot.user.mention} (Bot) spent {y} coins.")
-
-            state_display = generate_game_display(game)
-            await ctx.send(state_display)
-
-            if not game.active:
-                result = game.check_winner()
-                if result == "Player1":
-                    await ctx.send(f"{ctx.author.mention} wins! 🏆")
-                elif result == "Player2":
-                    await ctx.send(f"{bot.user.mention} wins! 🏆")
-                else:
-                    await ctx.send("It’s a tie!")
-                ongoing_games.pop(user_id, None)
+        await playBot(ctx, x, game)
     else:
-        if(game.player1_id == ctx.author.id and not game.betsPlaced[0]):
-            game.bets[0] = x
-            game.betsPlaced[0] = True
-            player1 = await bot.fetch_user(game.player1_id)
-            await ctx.send(f"{player1.mention} placed their bet!",ephemeral=True)
-        elif(game.player2_id == ctx.author.id and not game.betsPlaced[1]):
-            game.bets[1] = x
-            game.betsPlaced[1] = True
-            player2 = await bot.fetch_user(game.player2_id)
-            await ctx.send(f"{player2.mention} placed their bet!",ephemeral=True)
+        await playUser(ctx, x, game)
 
-        if(game.betsPlaced[0] and game.betsPlaced[1]):
-            game.betsPlaced[0] = False
-            game.betsPlaced[1] = False
-            player1 = await bot.fetch_user(game.player1_id)
-            player2= await bot.fetch_user(game.player2_id)
-            game.play_round(game.bets[0], game.bets[1])
+async def playBot(ctx, x: int, game: TennisGame):
+    user_id = ctx.author.id
+    if user_id == game.player1_id:
+        if x < 0 or x > game.a:
+            await ctx.send(f"{ctx.author.mention}, invalid move! Choose between 0 and {game.a}.")
+            return
+        player1 = await bot.fetch_user(user_id)
+        y = new_strat(game.b, game.a, game.p)
+        game.play_round(x, y)
 
-            await ctx.send(f"{player1.mention} spent {game.bets[0]} coins.\n"
-                        f"{player2.mention} spent {game.bets[1]} coins.")
-            
-            state_display = generate_game_display(game)
+        await ctx.send(f"{ctx.author.mention} spent {x} coins.\n"
+                    f"{bot.user.mention} (Bot) spent {y} coins.")
+        
+        state_display = generate_game_display(game, [player1.mention, bot.user.mention])
+        await ctx.send(state_display)
 
-            await ctx.send(state_display)
-            if not game.active:
-                result = game.check_winner()
-                if result == "Player1":
-                    await ctx.send(f"{player1.mention} wins! 🏆")
-                elif result == "Player2":
-                    await ctx.send(f"{player2.mention} wins! 🏆")
-                else:
-                    await ctx.send("It’s a tie!")
-                ongoing_games.pop(game.player1_id, None)
-                ongoing_games.pop(game.player2_id, None)
+        if not game.active:
+            result = game.check_winner()
+            if result == "Player1":
+                await ctx.send(f"{ctx.author.mention} wins! 🏆")
+            elif result == "Player2":
+                await ctx.send(f"{bot.user.mention} wins! 🏆")
+            else:
+                await ctx.send("It’s a tie!")
+            ongoing_games.pop(user_id, None)
+
+async def playUser(ctx, x: int, game: TennisGame):
+    if(game.player1_id == ctx.author.id and not game.betsPlaced[0]):
+        game.bets[0] = x
+        game.betsPlaced[0] = True
+        player1 = await bot.fetch_user(game.player1_id)
+        await ctx.send(f"{player1.mention} placed their bet!",ephemeral=True)
+    elif(game.player2_id == ctx.author.id and not game.betsPlaced[1]):
+        game.bets[1] = x
+        game.betsPlaced[1] = True
+        player2 = await bot.fetch_user(game.player2_id)
+        await ctx.send(f"{player2.mention} placed their bet!",ephemeral=True)
+
+    if(game.betsPlaced[0] and game.betsPlaced[1]):
+        game.betsPlaced[0] = False
+        game.betsPlaced[1] = False
+        player1 = await bot.fetch_user(game.player1_id)
+        player2 = await bot.fetch_user(game.player2_id)
+        game.play_round(game.bets[0], game.bets[1])
+
+        await ctx.channel.send(f"{player1.mention} spent {game.bets[0]} coins.\n"
+                    f"{player2.mention} spent {game.bets[1]} coins.")
+        
+        state_display = generate_game_display(game, [player1.mention, player2.mention])
+
+        await ctx.channel.send(state_display)
+        if not game.active:
+            result = game.check_winner()
+            if result == "Player1":
+                await ctx.channel.send(f"{player1.mention} wins! 🏆")
+            elif result == "Player2":
+                await ctx.channel.send(f"{player2.mention} wins! 🏆")
+            else:
+                await ctx.channel.send("It’s a tie!")
+            ongoing_games.pop(game.player1_id, None)
+            ongoing_games.pop(game.player2_id, None)
 
 @bot.hybrid_command()
 async def stop_game(ctx):
@@ -190,7 +196,6 @@ async def stop_game(ctx):
     player2 = await bot.fetch_user(player2_id)
 
     await ctx.send(f"Game between {player1.mention} and {player2.mention} has been stopped.")
-
 
 @bot.hybrid_command(name="tennis_help")
 async def help_command(ctx):
