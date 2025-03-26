@@ -199,7 +199,7 @@ async def help_command(ctx):
     """
     help_text = (
         "**Tennis Bot Commands**\n"
-        "`!challenge - Sends a game request to another user`"
+        "`!challenge` - Sends a game request to another user\n"
         "`!start` — Start a new game (you vs the bot)\n"
         "`!play x` — Play a round by spending x coins (x must be <= your current coins)\n"
         "`!stop_game` — Stop your current game\n"
