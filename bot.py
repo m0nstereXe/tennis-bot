@@ -137,12 +137,12 @@ async def play(ctx, x: int):
             game.bets[0] = x
             game.betsPlaced[0] = True
             player1 = await bot.fetch_user(game.player1_id)
-            # await ctx.send(f"{player1.mention} placed their bet!")
+            await ctx.send(f"{player1.mention} placed their bet!",ephemeral=True)
         elif(game.player2_id == ctx.author.id and not game.betsPlaced[1]):
             game.bets[1] = x
             game.betsPlaced[1] = True
             player2 = await bot.fetch_user(game.player2_id)
-            # await ctx.send(f"{player2.mention} placed their bet!")
+            await ctx.send(f"{player2.mention} placed their bet!",ephemeral=True)
 
         if(game.betsPlaced[0] and game.betsPlaced[1]):
             game.betsPlaced[0] = False
