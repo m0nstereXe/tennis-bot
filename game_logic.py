@@ -18,7 +18,7 @@ def generate_game_display(game) -> str:
         cups_str = " ".join(cups)
 
     info_str = (
-        f"**Player1 Coins**: {game.a} | **Bot Coins**: {game.b}\n"
+        f"**Player1 Coins**: {game.a} | **Player2 Coins**: {game.b}\n"
         f"**Ball Position**: {game.p - 3}\n"
     )
 
@@ -33,6 +33,8 @@ class TennisGame:
         self.b = 64
         self.p = 3
         self.active = True
+        self.betsPlaced = [False, False]
+        self.bets = [0, 0]
 
     def play_round(self, x, y):
         if x > y:
