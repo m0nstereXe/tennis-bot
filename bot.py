@@ -174,18 +174,23 @@ async def stop_game(ctx):
     Command to stop your own game if needed.
     """
     user_id = ctx.author.id
-    if user_id in ongoing_games:
-        usergame = ongoing_games[user_id]
-        player1 = await bot.fetch(usergame.player1_id)
-        player2 = await bot.fetch(usergame.player2_id)
-        ongoing_games.pop(usergame.player1_id, None)
-        await ctx.send(f"{player1.mention}, your game has been stopped.")
-        if(usergame.player2_id != bot.user.id):
-            ongoing_games.pop(usergame.player2_id, None)
-            
-            await ctx.send(f"{player2.mention}, your game has been stopped.")
-    else:
+    if user_id not in ongoing_games:
         await ctx.send(f"{ctx.author.mention}, you have no game in progress to stop.")
+        return
+
+    game = ongoing_games[user_id]
+    player1_id = game.player1_id
+    player2_id = game.player2_id
+
+    # Remove the game from both players
+    ongoing_games.pop(player1_id, None)
+    ongoing_games.pop(player2_id, None)
+
+    player1 = await bot.fetch_user(player1_id)
+    player2 = await bot.fetch_user(player2_id)
+
+    await ctx.send(f"Game between {player1.mention} and {player2.mention} has been stopped.")
+
 
 @bot.hybrid_command(name="tennis_help")
 async def help_command(ctx):
