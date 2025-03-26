@@ -31,7 +31,13 @@ async def on_ready():
 @bot.hybrid_command()
 async def challenge(ctx, opponent):
     user = ctx.author
-    opponent = await bot.fetch_user(convert_mention_to_id(opponent))
+    opponent_id = convert_mention_to_id(opponent)
+    
+    if user.id == opponent_id:
+        await ctx.send(f"{ctx.author.mention}, you cannot challenge yourself!")
+        return
+
+    opponent = await bot.fetch_user(opponent_id)
 
     if user.id in ongoing_games:
         await ctx.send(f"{ctx.author.mention}, you already have a game in progress!")
