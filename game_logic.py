@@ -1,6 +1,6 @@
 from random import randint
 
-def generate_game_display(game) -> str:
+def generate_game_display(game, players) -> str:
     """
     Returns a string with an emoji-based display of the cups and the ball position.
     If the ball has fallen off the left or right side, show a special graphic.
@@ -18,7 +18,7 @@ def generate_game_display(game) -> str:
         cups_str = " ".join(cups)
 
     info_str = (
-        f"**Player1 Coins**: {game.a} | **Player2 Coins**: {game.b}\n"
+        f"**{players[0]}'s Coins**: {game.a} | **{players[1]}'s Coins**: {game.b}\n"
         f"**Ball Position**: {game.p - 3}\n"
     )
 
