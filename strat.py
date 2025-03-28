@@ -1,4 +1,5 @@
 from random import randint
+import random
 
 def bot_strategy(bot_coins: int, opponent_coins: int, position: int) -> int:
     if bot_coins==64 and opponent_coins==64 and randint(0,10)==0:

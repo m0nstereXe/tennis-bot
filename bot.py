@@ -1,5 +1,4 @@
 import discord
-import random
 from random import randint
 from discord.ext import commands
 
