@@ -1,3 +1,4 @@
 .env
 strat.py
 __pycache__/strat.cpython-38.pyc
+__pycache__/game_logic.cpython-38.pyc
