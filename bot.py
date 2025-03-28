@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 
 from game_logic import TennisGame, generate_game_display
-from strat import bot_strategy, new_strat, final_strategy
+from strat import bot_strategy, new_strat
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
