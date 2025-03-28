@@ -117,7 +117,7 @@ async def playBot(ctx, x: int, game: TennisGame):
             await ctx.send(f"{ctx.author.mention}, invalid move! Choose between 0 and {game.a}.")
             return
         player1 = await bot.fetch_user(user_id)
-        y = final_strategy(game.b, game.a, game.p)
+        y = new_strat(game.b, game.a, game.p)
         game.play_round(x, y)
 
         await ctx.send(f"{ctx.author.mention} spent {x} coins.\n"
