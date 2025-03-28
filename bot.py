@@ -2,8 +2,6 @@ import discord
 from random import randint
 from discord.ext import commands
 
-from dotenv import load_dotenv
-load_dotenv()
 import os
 
 from game_logic import TennisGame, generate_game_display
