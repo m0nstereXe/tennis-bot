@@ -1,111 +1,145 @@
 from random import randint
 import random
-
-def bot_strategy(bot_coins: int, opponent_coins: int, position: int) -> int:
-    if bot_coins==64 and opponent_coins==64 and randint(0,10)==0:
-        return 21 #hardcoded 21 :>
-
-    if(bot_coins and opponent_coins == 0):
-        return 1
-
-    delta = bot_coins - opponent_coins
-    d = 6 - position
-    c = bot_coins // d
-    ub = opponent_coins + 1
-    if c > opponent_coins:
-        return min(ub, c)
-
-    if delta > 10 and randint(0, 1):
-        return min(ub, randint(delta, min(bot_coins, delta + 5)))
-
-    if position == 2: 
-        if delta > 0 and randint(0, 1): 
-            return min(ub, delta)
-        return min(ub, randint(0, bot_coins // 4 + (bot_coins % 4 != 0)))
-    elif position == 1:
-        if(randint(0,1) and ub <= bot_coins):
-            return ub
-        if(randint(0,1) and 0<=ub-5<=bot_coins):
-            return ub-5
-        return min(ub, randint(min(bot_coins, 5), bot_coins))
-    elif position > 3:
-        if position == 5 and randint(0, 3) == 0:  # 25% chance to go crazy style
-            return min(ub, bot_coins)
-        return min(ub, randint(0, bot_coins // 7 + (bot_coins % 7 != 0)))  # play very safe
-    else:  # this is the three branch
-        if bot_coins > opponent_coins and randint(0, 1) == 0:  # 50%
-            return min(ub, 0)
+"""
+Ryolo tennis strategy
+"""
+# Define a helper function that generates a suggested bet based on the branch.
+def suggested_bet(ratio, push_edge, current_points):
+    local_act = random.random()
+    if push_edge:
+        # Critical round branch with granular ranges.
+        if ratio >= 1:  # We're ahead.
+            if ratio >= 1.5:
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.40, 0.60
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.60, 0.85
+                else:
+                    lower_bound, upper_bound = 0.85, 0.95
+            elif ratio >= 1.25:
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.30, 0.50
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.50, 0.75
+                else:
+                    lower_bound, upper_bound = 0.75, 0.90
+            elif ratio >= 1.1:
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.20, 0.40
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.40, 0.65
+                else:
+                    lower_bound, upper_bound = 0.65, 0.80
+            else:  # ratio between 1 and 1.1
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.10, 0.30
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.30, 0.50
+                else:
+                    lower_bound, upper_bound = 0.50, 0.65
         else:
-            return min(ub, randint(0, min(8, bot_coins)))
+            # We're behind. Use symmetric ranges based on the reciprocal.
+            if ratio <= 1/1.5:  # effective ratio >= 1.5.
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.05, 0.15
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.15, 0.30
+                else:
+                    lower_bound, upper_bound = 0.30, 0.45
+            elif ratio <= 1/1.25:  # effective ratio >= 1.25.
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.05, 0.20
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.20, 0.35
+                else:
+                    lower_bound, upper_bound = 0.35, 0.50
+            elif ratio <= 1/1.1:  # effective ratio >= 1.1.
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.05, 0.25
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.25, 0.40
+                else:
+                    lower_bound, upper_bound = 0.40, 0.55
+            else:
+                if local_act < 0.3:
+                    lower_bound, upper_bound = 0.05, 0.30
+                elif local_act < 0.8:
+                    lower_bound, upper_bound = 0.30, 0.45
+                else:
+                    lower_bound, upper_bound = 0.45, 0.60
+        return int(current_points * random.uniform(lower_bound, upper_bound))
+    else:
+        # Non-critical branch.
+        if ratio >= 1:  # We're ahead.
+            if ratio >= 1.5:
+                lower, upper = 0.40, 0.80
+            elif ratio >= 1.25:
+                lower, upper = 0.35, 0.75
+            elif ratio >= 1.1:
+                lower, upper = 0.30, 0.70
+            else:
+                lower, upper = 0.25, 0.65
+        else:
+            # When behind.
+            if ratio <= 1/1.5:
+                lower, upper = 0.05, 0.20
+            elif ratio <= 1/1.25:
+                lower, upper = 0.10, 0.25
+            elif ratio <= 1/1.1:
+                lower, upper = 0.15, 0.30
+            else:
+                lower, upper = 0.20, 0.35
+        return int(current_points * random.uniform(lower, upper))
 
-def new_strat_base(bc: int, oc :int, p:int) -> int:
-    delta = bc - oc 
-    d = 6 - p
-    p = p - 3
-    
-    if delta>0 and oc == 0: #trivial forced move
-        return 1
+def hardcoded_strategy(current_points, opponent_points, position, first_round):
+    """
+    Hardcoded strategy with ratio-based bet fraction ranges and a safety check:
+      - On the first round, bet a small randomized amount based on 1 point.
+      - In later rounds, first generate a bet based on whether we're in a critical 
+        (push-edge) situation or not. The bet fraction is chosen according to several 
+        ratio intervals (current_points/opponent_points), with symmetric ranges when behind.
+      - Then, if making that bet would leave us with remaining points (current_points - bet)
+        such that the opponent's points are more than 2.5 times our remaining points,
+        we re-generate the bet.
+      - Finally, we cap the bet if the opponent has fewer points (never betting more than
+        opponent_points+1), and if the opponent has 0, we default to a minimal bet.
+    """
+    # Opening move: always bet a small randomized amount in round 1.
+    if first_round:
+        bet = round(1 * random.uniform(1, 5))
+        if opponent_points < current_points:
+            bet = min(bet, opponent_points + 1)
+        return bet
 
-    c = bc // d 
-    if c > oc: return c
-    
-    if p == 0: #bot tie
-        if oc == 64: #opening move
-            r = randint(0,10)
-            if r <= 3: return 0
-            elif r == 4: return randint(0,4)
-            elif r == 5: return randint(0,8)
-            elif r == 6: return randint(0,15)
-            else: return randint(15,21) #aggressive open
-        x = randint(0,10)
+    # Compute ratio (if opponent_points is 0, use infinity).
+    ratio = current_points / opponent_points if opponent_points > 0 else float('inf')
 
-        if delta>0 and 5*delta <= bc and randint(0,1): return 2*delta 
+    # Determine if we're in a "push-edge" situation.
+    push_edge = (position==5)
 
-        if x <= 1: return 0
-        if x<=6 and oc>=55: return randint(10,20)
-        if x<=6 and oc >= 40: return randint(5,10)
-        elif x<=9 and x >= 25: return min(abs(delta) + randint(-10,10),bc//2)
+    # Generate a bet that satisfies our safety condition:
+    # "If making this bet leaves us with remaining points such that the opponent has > 2.5x our remaining points,
+    # then re-generate the bet."
+    max_attempts = 100
+    attempt = 0
+    bet = suggested_bet(ratio=ratio, push_edge=push_edge, current_points=current_points)
+    while attempt < max_attempts:
+        remaining = current_points - bet
+        # Only check the condition if we would have some points left.
+        if remaining > 0 and opponent_points > 1.5 * remaining:
+            bet = suggested_bet(ratio=ratio, push_edge=push_edge, current_points=current_points)  # regenerate the bet
+            attempt += 1
+        else:
+            break
+    if attempt == max_attempts:
+        # Fallback if we couldn't find a safe bet.
+        bet = 1
 
-        return randint(0,bc//3 + (bc%3 != 0)) 
-    elif p == 1: 
-        x = randint(0, 10)   
-        if x<=4: 
-            if oc>= 40: return randint(10,20)
-            if(oc >= 20): return randint(5,10)
-            return randint(0,min(8,bc))
-        if x <= 8:
-            return randint(0, bc // 4 + (bc % 4 != 0))
-        return randint(0,abs(delta))
-    elif p == -1:
-        x = randint(0, 10)   
-        if x<=4: 
-            if oc>= 40: return randint(10,20)
-            if(oc >= 20): return randint(5,10)
-            return randint(0,min(8,bc))
-        if x <= 8:
-            return randint(0, bc // 4 + (bc % 4 != 0))
-        return randint(0,abs(delta))
-    elif p == -2: #bot losing by 2
-        x = randint(0,10)
-        if bc>oc and x<=1: return oc+1
-        if x<=6: return min(bc,randint(delta,delta+5))
-        if x == 10: return min(bc,1)
-        return randint(bc //2 + (bc&1), bc)
+    # Additional cap: if the opponent's points are less than or equal to ours, never bet more than opponent_points+1.
+    if opponent_points <= current_points:
+        bet = min(bet, opponent_points + 1)
 
-    elif p == 2: #bot winning by 2
-        x = randint(0,10)
-        if x <= 3: return bc #crazy style go for the kill
-        if x<= 6: return bc//2
-        if x<= 9: return 0
+    if opponent_points == 0:
+        bet = 1
 
-        return randint(0,bc)
-
-def strat_wrapper(bc: int, oc :int, p:int) -> int:
-    ub=oc+1
-    ub = min(ub,bc)
-    res =min(new_strat_base(bc,oc,p),ub)
-    res = max(res,0)
-    return res 
-
-def new_strat(bc: int, oc :int, p:int) -> int:
-    return strat_wrapper(bc,oc,p)
+    return bet
