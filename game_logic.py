@@ -33,10 +33,14 @@ class TennisGame:
         self.b = 64
         self.p = 3
         self.active = True
+        self.start = True
         self.betsPlaced = [False, False]
         self.bets = [0, 0]
 
     def play_round(self, x, y):
+
+        self.start=False
+
         if x > y:
             if self.p > 1:
                 self.p -= 1
