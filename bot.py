@@ -122,7 +122,7 @@ async def playBot(ctx, x: int, game: TennisGame):
             return
         player1 = await bot.fetch_user(user_id)
         #Ryolo's strategy!
-        y = hardcoded_strategy(game.b, game.a, game.p, game.start)
+        # y = hardcoded_strategy(game.b, game.a, game.p, game.start)
 
         #APRIL FOOLS 🤣🤣🤣 !!!!
         y = x+1
