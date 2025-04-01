@@ -126,7 +126,8 @@ async def playBot(ctx, x: int, game: TennisGame):
 
         #APRIL FOOLS 🤣🤣🤣 !!!!
         y = x+1
-        game.play_round(x, y)
+        if y > game.b: game.play_round(x,0)
+        else: game.play_round(x, y)
 
         await ctx.send(f"{ctx.author.mention} spent {x} coins.\n"
                     f"{bot.user.mention} (Bot) spent {y} coins.")
