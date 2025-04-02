@@ -122,11 +122,8 @@ async def playBot(ctx, x: int, game: TennisGame):
             return
         player1 = await bot.fetch_user(user_id)
         #Ryolo's strategy!
-        # y = hardcoded_strategy(game.b, game.a, game.p, game.start)
-
-        #APRIL FOOLS 🤣🤣🤣 !!!!
-        y = x+1
-        if y > game.b: y=0
+        y = hardcoded_strategy(game.b, game.a, game.p, game.start)
+        
         game.play_round(x, y)
 
         await ctx.send(f"{ctx.author.mention} spent {x} coins.\n"
