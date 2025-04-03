@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 
 from game_logic import TennisGame, generate_game_display
-from strat import hardcoded_strategy
+from strat import bot_strategy, new_strat
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
@@ -99,10 +99,6 @@ async def startGame(channel, players, botGame):
 
 @bot.hybrid_command()
 async def play(ctx, x: int):
-    """
-    User play logic, decides whether to do playBot or playUser based on whether the user is playing
-    a bot or a user
-    """
     user_id = ctx.author.id
     if user_id not in ongoing_games:
         await ctx.send(f"{ctx.author.mention}, you have no active game. Use `!start` first.")
@@ -121,9 +117,7 @@ async def playBot(ctx, x: int, game: TennisGame):
             await ctx.send(f"{ctx.author.mention}, invalid move! Choose between 0 and {game.a}.")
             return
         player1 = await bot.fetch_user(user_id)
-        #Ryolo's strategy!
-        y = hardcoded_strategy(game.b, game.a, game.p, game.start)
-        
+        y = new_strat(game.b, game.a, game.p)
         game.play_round(x, y)
 
         await ctx.send(f"{ctx.author.mention} spent {x} coins.\n"

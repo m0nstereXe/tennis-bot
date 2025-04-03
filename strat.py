@@ -1,106 +1,111 @@
 from random import randint
 import random
 
-class AdaptiveStrategy:
-    """
-    Adaptive strategy using a shifted truncated-normal distribution over [0,3] to choose a mode:
-      - Modes:
-          "conservative": bet 5-35% of remaining points,
-          "moderate": bet 25-65%,
-          "aggressive": bet 55-90%.
-      - On the first turn, a mode is chosen at random.
-      - In a critical round (position == 5), 70% of the time choose aggressive, 
-        30% choose a uniform bet between 1 and 5.
-      - Otherwise, sample a value from a normal (mean 1.5, std 0.55, clamped to [0,3]),
-        shift it by a factor based on the ratio (current_points/opponent_points),
-        and map the result to a mode: [0,1) → conservative, [1,2) → moderate, [2,3] → aggressive.
-      - Safety checks: if the bet leaves too few points (opponent_points > 1.5 * (current_points - bet)),
-        reduce the bet; also cap bet to opponent_points+1 when opponent is behind.
-    """
-    def __init__(self):
-        self.mode = None
-    
-    def reset(self):
-        self.mode = None
+def bot_strategy(bot_coins: int, opponent_coins: int, position: int) -> int:
+    if bot_coins==64 and opponent_coins==64 and randint(0,10)==0:
+        return 21 #hardcoded 21 :>
 
-    def conservative_bet(self, current_points):
-        return int(current_points * random.uniform(0.05, 0.35))
+    if(bot_coins and opponent_coins == 0):
+        return 1
 
-    def moderate_bet(self, current_points):
-        return int(current_points * random.uniform(0.25, 0.65))
-    
-    def aggressive_bet(self, current_points):
-        return int(current_points * random.uniform(0.55, 0.9))
-    
-    def uniform_bet(self, current_points):
-        return min(current_points, random.randint(1, 5))
-    
-    def sample_mode_value(self):
-        sample = random.gauss(1.5, 0.55)
-        return max(0, min(sample, 3))
-    
-    def choose_mode(self, current_points, opponent_points):
-        ratio = current_points / opponent_points if opponent_points > 0 else float('inf')
-        base = self.sample_mode_value()
-        shift_factor = 1.0
-        if ratio > 1:
-            shifted = base - shift_factor * (ratio - 1)
-        elif ratio < 1:
-            shifted = base + shift_factor * (1 - ratio)
-        else:
-            shifted = base
-        shifted = max(0, min(shifted, 3))
-        if shifted < 1:
-            return "conservative"
-        elif shifted < 2:
-            return "moderate"
-        else:
-            return "aggressive"
-    
-    def __call__(self, current_points, opponent_points, position, first_round):
-        """
-        Parameters:
-          current_points: our remaining coins,
-          opponent_points: opponent’s remaining coins,
-          position: an integer (e.g. game.p) where position==5 indicates a critical round,
-          first_round: boolean, True if it is the first round.
-        Returns an integer bet.
-        """
-        push_edge = (position == 5)
-        
-        if first_round:
-            self.mode = "conservative"
-        else:
-            if push_edge:
-                if random.random() < 0.7:
-                    self.mode = "aggressive"
-                else:
-                    self.mode = "uniform"
-            else:
-                self.mode = self.choose_mode(current_points, opponent_points)
-        
-        if self.mode == "conservative":
-            bet = self.conservative_bet(current_points)
-        elif self.mode == "moderate":
-            bet = self.moderate_bet(current_points)
-        elif self.mode == "aggressive":
-            bet = self.aggressive_bet(current_points)
-        elif self.mode == "uniform":
-            bet = self.uniform_bet(current_points)
-        else:
-            bet = self.conservative_bet(current_points)
-        
-        remaining = current_points - bet
-        if remaining > 0 and opponent_points > 1.5 * remaining:
-            if not push_edge:
-                bet = int(bet * random.gauss(0.3, 0.15))
-        if opponent_points < current_points:
-            bet = min(bet, opponent_points + 1)
-        if opponent_points > 0 and current_points / opponent_points > 3:
-            bet = opponent_points + 1
-        if opponent_points == 0:
-            bet = 1
-        
-        return bet
+    delta = bot_coins - opponent_coins
+    d = 6 - position
+    c = bot_coins // d
+    ub = opponent_coins + 1
+    if c > opponent_coins:
+        return min(ub, c)
 
-hardcoded_strategy=AdaptiveStrategy()
+    if delta > 10 and randint(0, 1):
+        return min(ub, randint(delta, min(bot_coins, delta + 5)))
+
+    if position == 2: 
+        if delta > 0 and randint(0, 1): 
+            return min(ub, delta)
+        return min(ub, randint(0, bot_coins // 4 + (bot_coins % 4 != 0)))
+    elif position == 1:
+        if(randint(0,1) and ub <= bot_coins):
+            return ub
+        if(randint(0,1) and 0<=ub-5<=bot_coins):
+            return ub-5
+        return min(ub, randint(min(bot_coins, 5), bot_coins))
+    elif position > 3:
+        if position == 5 and randint(0, 3) == 0:  # 25% chance to go crazy style
+            return min(ub, bot_coins)
+        return min(ub, randint(0, bot_coins // 7 + (bot_coins % 7 != 0)))  # play very safe
+    else:  # this is the three branch
+        if bot_coins > opponent_coins and randint(0, 1) == 0:  # 50%
+            return min(ub, 0)
+        else:
+            return min(ub, randint(0, min(8, bot_coins)))
+
+def new_strat_base(bc: int, oc :int, p:int) -> int:
+    delta = bc - oc 
+    d = 6 - p
+    p = p - 3
+    
+    if delta>0 and oc == 0: #trivial forced move
+        return 1
+
+    c = bc // d 
+    if c > oc: return c
+    
+    if p == 0: #bot tie
+        if oc == 64: #opening move
+            r = randint(0,10)
+            if r <= 3: return 0
+            elif r == 4: return randint(0,4)
+            elif r == 5: return randint(0,8)
+            elif r == 6: return randint(0,15)
+            else: return randint(15,21) #aggressive open
+        x = randint(0,10)
+
+        if delta>0 and 5*delta <= bc and randint(0,1): return 2*delta 
+
+        if x <= 1: return 0
+        if x<=6 and oc>=55: return randint(10,20)
+        if x<=6 and oc >= 40: return randint(5,10)
+        elif x<=9 and x >= 25: return min(abs(delta) + randint(-10,10),bc//2)
+
+        return randint(0,bc//3 + (bc%3 != 0)) 
+    elif p == 1: 
+        x = randint(0, 10)   
+        if x<=4: 
+            if oc>= 40: return randint(10,20)
+            if(oc >= 20): return randint(5,10)
+            return randint(0,min(8,bc))
+        if x <= 8:
+            return randint(0, bc // 4 + (bc % 4 != 0))
+        return randint(0,abs(delta))
+    elif p == -1:
+        x = randint(0, 10)   
+        if x<=4: 
+            if oc>= 40: return randint(10,20)
+            if(oc >= 20): return randint(5,10)
+            return randint(0,min(8,bc))
+        if x <= 8:
+            return randint(0, bc // 4 + (bc % 4 != 0))
+        return randint(0,abs(delta))
+    elif p == -2: #bot losing by 2
+        x = randint(0,10)
+        if bc>oc and x<=1: return oc+1
+        if x<=6: return min(bc,randint(delta,delta+5))
+        if x == 10: return min(bc,1)
+        return randint(bc //2 + (bc&1), bc)
+
+    elif p == 2: #bot winning by 2
+        x = randint(0,10)
+        if x <= 3: return bc #crazy style go for the kill
+        if x<= 6: return bc//2
+        if x<= 9: return 0
+
+        return randint(0,bc)
+
+def strat_wrapper(bc: int, oc :int, p:int) -> int:
+    ub=oc+1
+    ub = min(ub,bc)
+    res =min(new_strat_base(bc,oc,p),ub)
+    res = max(res,0)
+    return res 
+
+def new_strat(bc: int, oc :int, p:int) -> int:
+    return strat_wrapper(bc,oc,p)
