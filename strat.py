@@ -30,10 +30,10 @@ class AdaptiveStrategy:
         return int(current_points * random.uniform(0.25, 0.65))
     
     def aggressive_bet(self, current_points):
-        return int(current_points * random.uniform(0.55, 0.9))
+        return int(current_points * random.uniform(0.7, 0.85))
     
     def uniform_bet(self, current_points):
-        return min(current_points, random.randint(1, 5))
+        return min(current_points, random.randint(1, 3))
     
     def sample_mode_value(self):
         sample = random.gauss(1.5, 0.55)
@@ -57,27 +57,20 @@ class AdaptiveStrategy:
         else:
             return "aggressive"
     
-    def __call__(self, current_points, opponent_points, position, first_round):
-        """
-        Parameters:
-          current_points: our remaining coins,
-          opponent_points: opponent’s remaining coins,
-          position: an integer (e.g. game.p) where position==5 indicates a critical round,
-          first_round: boolean, True if it is the first round.
-        Returns an integer bet.
-        """
-        push_edge = (position == 5)
+    def __call__(self, role, current_points, opponent_points, overall_score, round_number):
+        push_edge = ((role == "positive" and overall_score == 2) or 
+                     (role == "negative" and overall_score == -2))
         
-        if first_round:
+        if round_number == 1:
             self.mode = "conservative"
         else:
             if push_edge:
-                if random.random() < 0.7:
+                if random.random() < 0.9:
                     self.mode = "aggressive"
                 else:
                     self.mode = "uniform"
             else:
-                self.mode = self.choose_mode(current_points, opponent_points)
+                self.mode = self.choose_mode(role, current_points, opponent_points, overall_score)
         
         if self.mode == "conservative":
             bet = self.conservative_bet(current_points)
@@ -93,10 +86,10 @@ class AdaptiveStrategy:
         remaining = current_points - bet
         if remaining > 0 and opponent_points > 1.5 * remaining:
             if not push_edge:
-                bet = int(bet * random.gauss(0.3, 0.15))
+                bet = max(int(bet * random.gauss(0.35, 0.05)), 0)
         if opponent_points < current_points:
             bet = min(bet, opponent_points + 1)
-        if opponent_points > 0 and current_points / opponent_points > 3:
+        if opponent_points > 0 and current_points / opponent_points > 2:
             bet = opponent_points + 1
         if opponent_points == 0:
             bet = 1
